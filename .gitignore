@@ -33,6 +33,6 @@ build/
 .vscode/
 
 dockerfiles/binaries/
-dockercompose/**
-!dockercompose/*.yaml
-!dockercompose/*.yml
+# данные контейнеров, которые монтируются в папку dockercompose
+dockercompose/pgdata/
+dockercompose/*-data/

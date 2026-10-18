@@ -1,6 +1,7 @@
 package com.misis.archapp.user.service;
 
 import com.misis.archapp.contract.dto.UserCreatedEvent;
+import com.misis.archapp.contract.metrics.Metrics;
 import com.misis.archapp.user.db.User;
 import com.misis.archapp.user.db.UserRepository;
 import com.misis.archapp.user.dto.UserCreateDTO;
@@ -9,6 +10,7 @@ import com.misis.archapp.user.dto.UserUpdateDTO;
 import com.misis.archapp.user.dto.mapper.UserMapper;
 import com.misis.archapp.user.service.cache.UserCacheService;
 import com.misis.archapp.user.service.publisher.UserEventPublisher;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,18 +29,21 @@ public class UserService {
     private final UserMapper userMapper;
     private final UserCacheService userCacheService;
     private final UserEventPublisher userEventPublisher;
+    private final MeterRegistry meterRegistry;
 
     @Autowired
     public UserService(
         UserRepository userRepository,
         UserMapper userMapper,
         UserCacheService userCacheService,
-        UserEventPublisher userEventPublisher
+        UserEventPublisher userEventPublisher,
+        MeterRegistry meterRegistry
     ) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.userCacheService = userCacheService;
         this.userEventPublisher = userEventPublisher;
+        this.meterRegistry = meterRegistry;
     }
 
     public List<UserDTO> getAllUsers() {
@@ -73,6 +78,9 @@ public class UserService {
         UserCreatedEvent userCreatedEvent =
             new UserCreatedEvent(savedUser.getId(), savedUser.getEmail(), savedUser.getName());
         userEventPublisher.publishUserEvent(userCreatedEvent);
+
+        // после того как пользователь был создан и ивент отправлен - увеличивает Counter метрику
+        meterRegistry.counter(Metrics.USERS_CREATED_TOTAL).increment();
 
         return userMapper.toDTO(savedUser);
     }

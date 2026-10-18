@@ -1,0 +1,27 @@
+global:
+  scrape_interval: 15s      # интервал забора метрик
+  evaluation_interval: 15s  # интервал вычисления выражений для алертов
+
+scrape_configs:
+  - job_name: 'user-service'
+    metrics_path: "/actuator/prometheus"
+    static_configs:
+      - targets: ['user-service:8080']
+
+  # внешняя система - RabbitMQ (плагин rabbitmq_prometheus включен в образе по умолчанию)
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15692']
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - "alertmanager:9093"
+
+rule_files:
+  - "alert_rules.yml"

@@ -1,9 +1,12 @@
 package com.misis.archapp.user.controller;
 
+import com.misis.archapp.contract.metrics.Metrics;
 import com.misis.archapp.user.dto.UserCreateDTO;
 import com.misis.archapp.user.dto.UserDTO;
 import com.misis.archapp.user.dto.UserUpdateDTO;
 import com.misis.archapp.user.service.UserService;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -24,12 +27,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserRestApiController {
 
     private final UserService userService;
+    private final MeterRegistry meterRegistry;
 
     @Autowired
     public UserRestApiController(
-        UserService userService
+        UserService userService,
+        MeterRegistry meterRegistry
     ) {
         this.userService = userService;
+        this.meterRegistry = meterRegistry;
     }
 
     @GetMapping
@@ -39,12 +45,16 @@ public class UserRestApiController {
 
     @GetMapping("{id}")
     public UserDTO getUserById(@PathVariable("id") UUID id) {
-        return userService.getUserById(id);
+        // метрика времени выполнения запроса с тегом GET
+        Timer timer = meterRegistry.timer(Metrics.API_USER_REQ_DURATION, Metrics.METHOD_TAG, Metrics.GET_TAG_VAL);
+        return timer.record(() -> userService.getUserById(id));
     }
 
     @PostMapping
     public UserDTO createUser(@RequestBody @Valid UserCreateDTO userCreateDTO) {
-        return userService.createUser(userCreateDTO);
+        // метрика времени выполнения запроса с тегом POST
+        Timer timer = meterRegistry.timer(Metrics.API_USER_REQ_DURATION, Metrics.METHOD_TAG, Metrics.POST_TAG_VAL);
+        return timer.record(() -> userService.createUser(userCreateDTO));
     }
 
     @PatchMapping("{id}")
