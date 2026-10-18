@@ -24,6 +24,12 @@
             <artifactId>shared-contract</artifactId>
         </dependency>
 
+        <!-- Axon: command/event bus, event store (Axon Server) -->
+        <dependency>
+            <groupId>org.axonframework</groupId>
+            <artifactId>axon-spring-boot-starter</artifactId>
+        </dependency>
+
         <!-- Spring Boot + Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

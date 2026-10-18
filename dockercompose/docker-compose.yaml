@@ -1,111 +1,181 @@
 services:
-  # Приложения собираются из target/*.jar, поэтому перед `docker compose build` нужен `mvn clean install`
+  # Приложения собираются из target/*.jar, поэтому перед `docker compose up --build` нужен `mvn clean install`
+  balance-service:
+    build:
+      context: ../balance-service
+      dockerfile: Dockerfile
+    container_name: balance-service-lab5
+    environment:
+      SPRING_RABBITMQ_HOST: 'rabbitmq'
+      SPRING_DATASOURCE_URL: 'jdbc:postgresql://balance-db:5432/balance-db'
+      AXON_AXONSERVER_SERVERS: 'axonserver:8124'
+    networks:
+      - balance-net
+      - shared-net
+    ports:
+      - "8081:8080"
+    depends_on:
+      - balance-db
+      - rabbitmq
+      - axonserver
+    restart: unless-stopped
+
+  balance-db:
+    image: postgres:13.3
+    container_name: balance-db-lab5
+    networks:
+      - balance-net
+    environment:
+      POSTGRES_DB: "balance-db"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+    volumes:
+      - ./balance-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
   user-service:
     build:
       context: ../user-service
       dockerfile: Dockerfile
-    container_name: user-service
+    container_name: user-service-lab5
     environment:
-      SPRING_DATA_REDIS_HOST: keydb
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/apidemo-db'
+      SPRING_DATA_REDIS_HOST: 'user-keydb'
+      SPRING_RABBITMQ_HOST: 'rabbitmq'
+      SPRING_DATASOURCE_URL: 'jdbc:postgresql://user-db:5432/apidemo-db'
+    networks:
+      - user-net
+      - shared-net
     ports:
       - "8080:8080"
     depends_on:
-      - postgres
-      - keydb
+      - user-keydb
+      - user-db
       - rabbitmq
+    restart: unless-stopped
+
+  user-db:
+    image: postgres:13.3
+    container_name: user-db-lab5
+    environment:
+      POSTGRES_DB: "apidemo-db"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+    networks:
+      - user-net
+    volumes:
+      - ./user-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  user-keydb:
+    image: "eqalpha/keydb:x86_64_v5.3.3"
+    container_name: user-keydb-lab5
+    command: "keydb-server /etc/keydb/redis.conf --server-threads 2"
+    networks:
+      - user-net
+    volumes:
+      - "./keydb-data:/data"
     restart: unless-stopped
 
   notification-service:
     build:
       context: ../notification-service
       dockerfile: Dockerfile
-    container_name: notification-service
+    container_name: notification-service-lab5
+    networks:
+      - shared-net
     environment:
       SPRING_RABBITMQ_HOST: rabbitmq
     depends_on:
       - rabbitmq
     restart: unless-stopped
 
-  postgres:
-    image: postgres:13.3
-    container_name: postgres-lab4
+  # Event Store + Event Bus для balance-service, UI: http://localhost:8024
+  axonserver:
+    image: axoniq/axonserver
+    container_name: axonserver-lab5
+    ports:
+      - "8024:8024"   # HTTP UI
+      - "8124:8124"   # gRPC для приложений
     environment:
-      POSTGRES_DB: "apidemo-db"
-      POSTGRES_USER: "postgres"
-      POSTGRES_PASSWORD: "postgres"
-      PGDATA: "/var/lib/postgresql/data/pgdata"
-    ports:
-      - "5432:5432"
-    volumes:
-      - .:/var/lib/postgresql/data
-    restart: always
-
-  keydb:
-    image: "eqalpha/keydb:x86_64_v5.3.3"
-    container_name: keydb-lab4
-    command: "keydb-server /etc/keydb/redis.conf --server-threads 2"
-    volumes:
-      - "data:/data"
-    ports:
-      - "6379:6379"
+      AXONIQ_AXONSERVER_NAME: axonserver
+      AXONIQ_AXONSERVER_HOSTNAME: axonserver
+      AXONIQ_AXONSERVER_DEVMODE_ENABLED: "true"
+      AXONIQ_AXONSERVER_STANDALONE: "true"
+    networks:
+      - shared-net
     restart: unless-stopped
 
   rabbitmq:
     image: "rabbitmq:3-management"
-    container_name: rabbitmq-archapp-lab4
+    container_name: rabbitmq-lab5
+    networks:
+      - shared-net
     ports:
       - "5672:5672"
       - "15672:15672"
-      - "15692:15692"  # по этому порту Prometheus забирает метрики рэббита
+      - "15692:15692"
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
-      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbitmq_prometheus true" # плагин для отдачи метрик
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbitmq_prometheus true"
     volumes:
       - ./rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:v2.44.0
-    container_name: prometheus-archapp-lab4
+    container_name: prometheus-archapp-lab5
+    networks:
+      - shared-net
     ports:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - ./alert_rules.yml:/etc/prometheus/alert_rules.yml
+    restart: unless-stopped
 
   grafana:
     image: grafana/grafana:10.4.2
-    container_name: grafana-archapp-lab4
+    container_name: grafana-lab5
+    networks:
+      - shared-net
     ports:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning  # датасурс Prometheus и дашборд подключаются автоматически
+      - ./grafana/provisioning:/etc/grafana/provisioning
     depends_on:
       - prometheus
+    restart: unless-stopped
 
   alertmanager:
     image: prom/alertmanager:v0.24.0
-    container_name: alertmanager-archapp-lab4
+    container_name: alertmanager-lab5
+    networks:
+      - shared-net
     ports:
       - "9093:9093"
     volumes:
       - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    restart: unless-stopped
 
-  # тестовый SMTP сервер, письма от Alertmanager видны на http://localhost:8025
   mailpit:
     image: axllent/mailpit
-    container_name: mailpit-lab4
+    container_name: mailpit-lab5
+    networks:
+      - shared-net
     ports:
       - "1025:1025"
       - "8025:8025"
     restart: unless-stopped
 
 volumes:
-  data:
-    driver: local
   grafana-data:
+
+networks:
+  user-net:     # user-service + его БД и KeyDB
+  balance-net:  # balance-service + его БД
+  shared-net:   # общая сеть: rabbitmq, axonserver, prometheus и т.д.

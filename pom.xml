@@ -49,6 +49,13 @@
                 <version>1.5.5.Final</version>
             </dependency>
 
+            <!-- Axon Framework: CQRS + Event Sourcing -->
+            <dependency>
+                <groupId>org.axonframework</groupId>
+                <artifactId>axon-spring-boot-starter</artifactId>
+                <version>4.9.1</version>
+            </dependency>
+
             <!-- OpenAPI -->
             <dependency>
                 <groupId>org.springdoc</groupId>
