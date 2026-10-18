@@ -35,3 +35,4 @@ build/
 dockerfiles/binaries/
 dockercompose/**
 !dockercompose/*.yaml
+!dockercompose/*.yml
