@@ -15,4 +15,8 @@ public abstract class Metrics {
     public static final String POST_TAG_VAL = "post";
     public static final String GET_TAG_VAL = "get";
 
+    // Counter метрика в notification-service - сколько событий получено из RabbitMQ, с лейблом event = тип события
+    public static final String NOTIFICATIONS_RECEIVED_TOTAL = "notifications.received";
+    public static final String EVENT_TAG = "event";
+
 }
