@@ -1,5 +1,6 @@
 package com.misis.archapp.user.service;
 
+import com.misis.archapp.contract.dto.UserCreatedEvent;
 import com.misis.archapp.user.db.User;
 import com.misis.archapp.user.db.UserRepository;
 import com.misis.archapp.user.dto.UserCreateDTO;
@@ -7,6 +8,7 @@ import com.misis.archapp.user.dto.UserDTO;
 import com.misis.archapp.user.dto.UserUpdateDTO;
 import com.misis.archapp.user.dto.mapper.UserMapper;
 import com.misis.archapp.user.service.cache.UserCacheService;
+import com.misis.archapp.user.service.publisher.UserEventPublisher;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -24,16 +26,19 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final UserCacheService userCacheService;
+    private final UserEventPublisher userEventPublisher;
 
     @Autowired
     public UserService(
         UserRepository userRepository,
         UserMapper userMapper,
-        UserCacheService userCacheService
+        UserCacheService userCacheService,
+        UserEventPublisher userEventPublisher
     ) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.userCacheService = userCacheService;
+        this.userEventPublisher = userEventPublisher;
     }
 
     public List<UserDTO> getAllUsers() {
@@ -63,6 +68,12 @@ public class UserService {
     public UserDTO createUser(UserCreateDTO userCreateDTO) {
         User user = userMapper.toEntity(userCreateDTO);
         User savedUser = userRepository.save(user);
+
+        // отправляет ивент о создании пользователя в RabbitMQ (асинхронно для notification-service)
+        UserCreatedEvent userCreatedEvent =
+            new UserCreatedEvent(savedUser.getId(), savedUser.getEmail(), savedUser.getName());
+        userEventPublisher.publishUserEvent(userCreatedEvent);
+
         return userMapper.toDTO(savedUser);
     }
 
