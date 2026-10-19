@@ -1,0 +1,39 @@
+services:
+  api-demo:
+    image: qqqq1211/1-ova:latest   # <логин Docker Hub>/<группа>-<инициалы>
+    container_name: api-demo
+    environment:
+      # параметры приложения берутся из переменных окружения
+      SERVER_PORT: "8080"
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/default"
+      SPRING_DATASOURCE_USERNAME: "postgres"
+      SPRING_DATASOURCE_PASSWORD: "postgres"
+    ports:
+      - "8080:8080"
+    networks:
+      - lab1-net
+    depends_on:
+      - postgres
+    restart: always
+
+  postgres:
+    image: postgres:13.3
+    container_name: postgres-lab1
+    environment:
+      POSTGRES_DB: "default"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+    ports:
+      - "8001:5432"   # снаружи 8001, внутри сети 5432
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    networks:
+      - lab1-net
+    restart: always
+
+networks:
+  lab1-net:
+
+volumes:
+  pg-data:

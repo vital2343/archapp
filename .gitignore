@@ -1,0 +1,9 @@
+target/
+.idea/
+*.iml
+.vscode/
+
+labs/lab1/binaries/*.jar
+
+pgdata/
+*-data/

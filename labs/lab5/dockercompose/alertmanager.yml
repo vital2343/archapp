@@ -1,0 +1,16 @@
+global:
+  smtp_smarthost: 'mailpit:1025'
+  smtp_from: 'alertmanager@example.com'
+  smtp_require_tls: false
+
+route:
+  receiver: 'email-receiver'
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 1h
+
+receivers:
+  - name: 'email-receiver'
+    email_configs:
+      - to: 'test@local.dev'
+        send_resolved: true

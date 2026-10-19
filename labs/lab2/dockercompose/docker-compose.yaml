@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:13.3
+    container_name: postgres-lab3
+    environment:
+      POSTGRES_DB: "apidemo-db"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+    ports:
+      - "5432:5432"
+    volumes:
+      - .:/var/lib/postgresql/data
+    restart: always
+
+  keydb:
+    image: "eqalpha/keydb:x86_64_v5.3.3"
+    container_name: keydb-lab3
+    command: "keydb-server /etc/keydb/redis.conf --server-threads 2"
+    volumes:
+      #      - "./redis.conf:/etc/keydb/redis.conf"
+      - "data:/data"
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+volumes:
+  data:
+    driver: local
